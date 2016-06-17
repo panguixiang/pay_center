@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.walrushz.pay.dao.WhiteListDao">
+
+    <select id="getBusnieseWhiteIps" resultType="com.walrushz.pay.common.model.BusnieseWhiteIp">
+		<![CDATA[ 
+			SELECT 
+				id,businese_name as businessName,
+				rsa_public_key as rsaPubKey,
+				white_ip as whiteIp,
+				rsa_private_key as rsaPrivKey,
+				busniess_key as busniessKey
+			FROM 
+				tbl_white_list where 1=1 ]]>
+	</select>
+	
+</mapper>

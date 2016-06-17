@@ -1,0 +1,148 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.walrushz.pay.dao.WechatTradeFlowDao">
+
+   <insert id="saveWechatTradeFlow" parameterType="com.walrushz.pay.common.model.WeChatModel">
+		<![CDATA[  
+			insert into wechat_trade_flow_${model.attach}(
+			 trade_flow_no,order_id,body,total_fee,product_id,extra_param,
+			 payer_busniess_account,seller_trade_account,back_url,
+			 description,business_key,trade_type,trade_status,wechat_err_code_des,
+			 wechat_err_code,wechat_result_code,wechat_return_msg,code_url,
+			 wechat_return_code,is_notice_client,create_time,update_time
+           ) 
+		  values(
+		   #{model.out_trade_no},#{model.order_id},#{model.body},#{model.total_fee},
+		   #{model.product_id},#{model.extra_param},#{model.payer_busniess_account},#{model.seller_trade_account},
+		   #{model.back_url},#{model.description},#{model.business_key},#{model.trade_type},
+		   1,#{model.wechat_err_code_des},#{model.wechat_err_code},#{model.wechat_result_code},
+		   #{model.wechat_return_msg},#{model.code_url},#{model.wechat_return_code},1,
+		   now(),now()
+	      )
+		]]>
+	</insert>
+	
+	<select id="getCountByOrderId" resultType="int">
+		<![CDATA[  
+			select 
+				count(trade_flow_no) 
+			from
+				wechat_trade_flow_${year} 
+			where 
+			   order_id=#{orderId}
+		]]>
+	</select>
+	
+	<select id="getWebChatVoByTradeNo" resultType="com.walrushz.pay.common.model.WebChatVo">
+		<![CDATA[  
+			select 
+				order_id,
+				extra_param,
+				business_key,
+				is_notice_client,
+				back_url
+			from
+				wechat_trade_flow_${year} 
+			where 
+			   trade_flow_no=#{out_trade_no} limit 1
+		]]>
+	</select>
+	
+	<select id="procUpdateWeChatTradeFlow" statementType="CALLABLE" parameterType="java.util.HashMap">
+		<![CDATA[
+		   {call proc_wechat_notice_trade_flow(
+      		#{map.out_trade_no,jdbcType=VARCHAR,mode=IN},
+      		#{map.order_id,jdbcType=VARCHAR,mode=IN},
+      		#{map.transaction_id,jdbcType=VARCHAR,mode=IN},
+      		#{map.total_fee,jdbcType=BIGINT,mode=IN},
+      		#{map.trade_type,jdbcType=VARCHAR,mode=IN},
+      		#{map.trade_status,jdbcType=INTEGER,mode=IN},
+      		#{map.err_code_des,jdbcType=VARCHAR,mode=IN},
+      		#{map.err_code,jdbcType=VARCHAR,mode=IN},
+      		#{map.result_code,jdbcType=VARCHAR,mode=IN},
+      		#{map.return_msg,jdbcType=VARCHAR,mode=IN},
+      		#{map.return_code,jdbcType=VARCHAR,mode=IN},
+      		#{map.yearstr,jdbcType=VARCHAR,mode=IN},
+      		#{map.is_notice_client,jdbcType=INTEGER,mode=IN}
+      		 )
+           }
+		]]>
+	</select>
+	
+	<select id="queryWechatPageByStatusAndIsNoticed" resultType="java.util.concurrent.ConcurrentHashMap">
+		<![CDATA[  
+			select 
+				order_id,
+				trade_status,
+				back_url,
+				extra_param,
+				total_fee,
+				business_key
+			from
+				wechat_trade_flow_${year}
+			where 
+			    is_notice_client=1 and trade_status in (2,3,4) limit #{start},#{end}
+		]]>
+	</select>
+	
+	<update id="updateWeChatIsNoticeByOrderId">
+		<![CDATA[
+			update wechat_trade_flow_${year} set is_notice_client=#{isNotice} where order_id=#{orderId}
+		]]>
+	</update>
+	
+	
+	
+	<select id="getWechatFlowNosByStatus" resultType="java.util.concurrent.ConcurrentHashMap">
+		<![CDATA[  
+			select 
+				trade_flow_no
+			from
+				wechat_trade_flow_${year}
+			where 
+			     trade_status = #{status} order by create_time desc limit #{start},#{end}
+		]]>
+	</select>
+	
+	<update id="updateReturnMsg">
+			update 
+				wechat_trade_flow_${year} 
+			set 
+			    wechat_return_code=#{map.return_code}
+			    <if test="map.return_msg != null">
+				  <![CDATA[ AND wechat_return_msg = #{map.return_msg} ]]>
+			    </if>
+			    
+			    <if test="map.result_code != null">
+				  <![CDATA[ AND wechat_result_code = #{map.result_code} ]]>
+			    </if>
+			    
+			    <if test="map.err_code != null">
+				  <![CDATA[ AND wechat_err_code = #{map.err_code} ]]>
+			    </if>
+			    <if test="map.err_code_des != null">
+				  <![CDATA[ AND wechat_err_code_des = #{map.err_code_des} ]]>
+			    </if>
+			    <if test="map.return_msg != null">
+				  <![CDATA[ AND wechat_return_msg = #{map.return_msg} ]]>
+			    </if>
+			    <if test="map.trade_status != null">
+				  <![CDATA[ AND trade_status = #{map.trade_status} ]]>
+			    </if>
+			where 
+				trade_flow_no=#{trade_flow_no}
+	</update>
+	
+	<select id="batchSearchByWechatOrderIds" resultType="com.walrushz.pay.common.model.CallBackBusiness">
+		<![CDATA[  
+			select 
+				order_id,business_key as busniessKey,total_fee as total_fee,trade_status,extra_param 
+			from 
+				wechat_trade_flow_${year} 
+			where order_id in ]]>
+			    <foreach item="item" index="index" collection="orderIdsArr" open="(" separator="," close=")">
+					#{item} 
+				</foreach>
+	</select>
+	
+</mapper>

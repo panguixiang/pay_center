@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.walrushz.pay.dao.AlipayTradeFlowDao">
+
+   <insert id="saveAlipayTradeFlow">
+		<![CDATA[  
+			insert into alipay_trade_flow_${map.extra_common_param}(
+				trade_flow_no,order_id,business_key,total_price,
+				trade_status,payment_type,payer_trade_account,
+				seller_trade_account,extra_param,payer_busniess_account,
+				back_url,description,create_time,update_time) 
+		values(
+		#{map.out_trade_no},#{json.order_id},#{map.businessKey},
+		#{json.total_fee},1,1,
+		#{json.buyer_email},#{map.seller_email},#{json.extra_param},
+		#{json.payer_busniess_account},#{json.back_url},
+		#{json.description},now(),now())
+		]]>
+	</insert>
+	
+	<select id="procUpdateAlipayTradeFlow" statementType="CALLABLE" parameterType="java.util.HashMap">
+		<![CDATA[
+		   {call proc_apliy_notice_trade_flow(
+      		#{map.buyer_email,jdbcType=VARCHAR,mode=IN},
+      		#{map.trade_no,jdbcType=VARCHAR,mode=IN},
+      		#{map.seller_email,jdbcType=VARCHAR,mode=IN},
+      		#{map.total_fee,jdbcType=DECIMAL,mode=IN},
+      		#{map.tradeFlowNo,jdbcType=VARCHAR,mode=IN},
+      		#{map.typeStatus,jdbcType=INTEGER,mode=IN},
+      		#{map.orderId,jdbcType=VARCHAR,mode=IN},
+      		#{map.year,jdbcType=VARCHAR,mode=IN},
+      		#{map.isNoticed,jdbcType=INTEGER,mode=IN}
+      		 )
+           }
+		]]>
+	</select>
+	
+	<select id="getAlipayTradeFlowByFlowNo" resultType="com.walrushz.pay.common.model.AlipayTradeFlow">
+		<![CDATA[  
+			select 
+				trade_flow_no as tradeFlowNo,
+				order_id as orderId,
+				business_key as businessKey,
+				trade_status as tradeStatus,
+				back_url as back_url,
+				is_notice_client,
+				extra_param as extraParam
+			from
+				alipay_trade_flow_${year}
+			where 
+			  trade_flow_no=#{flowNo}
+		]]>
+	</select>
+	
+	<select id="getAlipayTradeCountByOrderId" resultType="int">
+		<![CDATA[  
+			select 
+				count(trade_flow_no) 
+			from
+				alipay_trade_flow_${year}
+			where 
+			  order_id=#{orderId}
+		]]>
+	</select>
+	
+	<select id="batchSearchByApliyOrderIds" resultType="com.walrushz.pay.common.model.CallBackBusiness">
+		<![CDATA[  
+			select 
+				order_id,business_key as busniessKey,total_price as total_fee,trade_status,extra_param 
+			from 
+				alipay_trade_flow_${year} 
+			where order_id in ]]>
+			    <foreach item="item" index="index" collection="orderIdsArr" open="(" separator="," close=")">
+					#{item} 
+				</foreach>
+	</select>
+	
+	<select id="queryPageListByStatusAndIsNoticed" resultType="java.util.concurrent.ConcurrentHashMap">
+		<![CDATA[  
+			select 
+				order_id,
+				trade_status,
+				back_url,
+				extra_param,
+				total_price,
+				business_key as busniessKey
+			from
+				alipay_trade_flow_${year}
+			where 
+			    is_notice_client=1 and trade_status in (2,3) limit #{start},#{end}
+		]]>
+	</select>
+	
+	<update id="updateIsNoticeByOrderId">
+		<![CDATA[
+			update alipay_trade_flow_${year} set is_notice_client=#{isNotice} where order_id=#{orderId}
+		]]>
+	</update>
+	
+</mapper>
